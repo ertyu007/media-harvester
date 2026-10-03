@@ -61,8 +61,21 @@ def resolve_extension_from_mime(content_type: str, current_ext: str) -> Optional
         # Valid media: return the proper extension
         return MIME_TO_EXT.get(mime, current_ext)
 
-    # Non-media (text/html, application/json, etc.) → reject
-    return None
+def compute_file_hash(filepath: str) -> str:
+    """Compute SHA-256 hash of a file on disk."""
+    hasher = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        while chunk := f.read(65536):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+def is_duplicate_content(filepath: str, seen_hashes: set) -> bool:
+    """Check if file hash has already been seen; if not, add to seen_hashes."""
+    f_hash = compute_file_hash(filepath)
+    if f_hash in seen_hashes:
+        return True
+    seen_hashes.add(f_hash)
+    return False
 
 
 class MediaDownloader:

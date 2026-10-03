@@ -161,6 +161,9 @@ class MediaExtractor:
 
     def extract(self, url: str) -> ScrapeResult:
         final_url, html, _ = self.fetch_html(url)
+        return self.extract_from_html(html, final_url)
+
+    def extract_from_html(self, html: str, final_url: str) -> ScrapeResult:
         soup = BeautifulSoup(html, 'lxml')
         
         page_title = soup.title.string.strip() if soup.title and soup.title.string else final_url

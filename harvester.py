@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Media Harvester CLI
 Universal Media Scraper & High-Speed Batch Downloader
@@ -282,43 +282,56 @@ def process_single_url(
     use_timestamp: bool,
     overwrite: bool,
     show_stats: bool = False,
-    max_retries: int = 3
+    max_retries: int = 3,
+    json_mode: bool = False
 ):
-    console.print(f"\n[bold green]► Scanning:[/] [cyan]{url}[/cyan]")
+    if not json_mode:
+        console.print(f"\n[bold green]► Scanning:[/] [cyan]{url}[/cyan]")
     
     extractor = MediaExtractor()
     try:
         result = extractor.extract(url)
     except Exception as e:
-        console.print(f"[bold red]❌ Failed to fetch/parse URL:[/] {e}")
+        if json_mode:
+            print(json.dumps({"status": "error", "message": f"Failed to fetch/parse URL: {e}", "url": url}, ensure_ascii=False))
+        else:
+            console.print(f"[bold red]❌ Failed to fetch/parse URL:[/] {e}")
         return
 
     if not result.items:
-        console.print("[yellow]⚠ No media items found on this page.[/yellow]")
+        if json_mode:
+            print(json.dumps({"status": "empty", "message": "No media items found", "url": url, "items": []}, ensure_ascii=False))
+        else:
+            console.print("[yellow]⚠ No media items found on this page.[/yellow]")
         return
 
-    display_scrape_summary(result)
-    if show_stats:
-        stats_table = Table(title="[bold]Media Statistics[/bold]", box=box.SIMPLE_HEAD)
-        stats_table.add_column("Type", style="cyan")
-        stats_table.add_column("Count", justify="right", style="bold yellow")
-        for mtype, cnt in sorted(result.stats.items()):
-            stats_table.add_row(mtype.capitalize(), str(cnt))
-        stats_table.add_row("[bold]Total[/bold]", f"[bold green]{len(result.items)}[/bold green]")
-        console.print(stats_table)
+    if not json_mode:
+        display_scrape_summary(result)
+        if show_stats:
+            stats_table = Table(title="[bold]Media Statistics[/bold]", box=box.SIMPLE_HEAD)
+            stats_table.add_column("Type", style="cyan")
+            stats_table.add_column("Count", justify="right", style="bold yellow")
+            for mtype, cnt in sorted(result.stats.items()):
+                stats_table.add_row(mtype.capitalize(), str(cnt))
+            stats_table.add_row("[bold]Total[/bold]", f"[bold green]{len(result.items)}[/bold green]")
+            console.print(stats_table)
 
     # Initial filtering if provided via flags
     filtered_items = filter_media_items(result.items, extensions=extensions, media_types=media_type_filter)
 
     if not filtered_items:
-        console.print(f"[yellow]⚠ No media items matched criteria (ext: {extensions}, type: {media_type_filter}).[/yellow]")
+        if json_mode:
+            print(json.dumps({"status": "empty", "message": "No media items matched criteria", "url": url, "items": []}, ensure_ascii=False))
+        else:
+            console.print(f"[yellow]⚠ No media items matched criteria (ext: {extensions}, type: {media_type_filter}).[/yellow]")
         return
 
-    display_items_table(filtered_items)
+    if not json_mode:
+        display_items_table(filtered_items)
 
     # Selection in interactive mode
     selected_items = filtered_items
-    if not auto_confirm:
+    if not auto_confirm and not json_mode:
         selection_input = Prompt.ask(
             "\n[bold cyan]Select items or filter extension[/bold cyan] [dim](e.g. 'all', 'webp,jpg', '1,3,5-10', 'q' to cancel)[/dim]",
             default="all"
@@ -331,17 +344,40 @@ def process_single_url(
         selected_items = [filtered_items[i] for i in chosen_indices]
 
     if not selected_items:
-        console.print("[yellow]No items selected. Skipping.[/yellow]")
+        if json_mode:
+            print(json.dumps({"status": "empty", "message": "No items selected", "url": url, "items": []}, ensure_ascii=False))
+        else:
+            console.print("[yellow]No items selected. Skipping.[/yellow]")
         return
 
     if dry_run:
-        console.print(f"[bold magenta]⚡ Dry-run complete:[/] Would download {len(selected_items)} files.")
+        if json_mode:
+            payload = {
+                "status": "dry_run",
+                "source_url": url,
+                "title": result.title,
+                "stats": result.stats,
+                "total_items": len(selected_items),
+                "items": [
+                    {
+                        "url": it.url,
+                        "type": it.media_type.value,
+                        "extension": it.extension,
+                        "filename": it.original_filename
+                    }
+                    for it in selected_items
+                ]
+            }
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            console.print(f"[bold magenta]⚡ Dry-run complete:[/] Would download {len(selected_items)} files.")
         return
 
     # Setup directories (default: downloads/<domain>/)
     organizer = MediaOrganizer(base_output_dir=output_dir)
     target_folder = organizer.create_destination_structure(url, use_timestamp=use_timestamp)
-    console.print(f"\n[bold]📁 Saving to:[/] [green]{os.path.abspath(target_folder)}[/green]\n")
+    if not json_mode:
+        console.print(f"\n[bold]📁 Saving to:[/] [green]{os.path.abspath(target_folder)}[/green]\n")
 
     # Start Downloader
     downloader = MediaDownloader(
@@ -359,7 +395,7 @@ def process_single_url(
     # Write Manifest & Summary
     organizer.write_manifest(target_folder, result, downloaded)
 
-    # Print Final Summary
+    # Summary calculations
     success_count = sum(1 for i in downloaded if i.download_status == "success")
     failed_count = sum(1 for i in downloaded if i.download_status == "failed")
     skipped_count = sum(1 for i in downloaded if i.download_status == "skipped")
@@ -367,21 +403,37 @@ def process_single_url(
     total_bytes = sum(i.file_size or 0 for i in downloaded if i.download_status == "success")
     total_mb = total_bytes / (1024 * 1024)
 
-    summary_panel = Panel(
-        f"[bold green]✔ Download Complete![/bold green]\n\n"
-        f"• [bold]New Saved Files:[/] [green]{success_count}[/green] files ({total_mb:.2f} MB)\n"
-        f"• [bold]Skipped:[/] [yellow]{skipped_count}[/yellow] ({already_exist_count} already existed on disk)\n"
-        f"• [bold]Failed:[/] [red]{failed_count}[/red]\n"
-        f"• [bold]Destination:[/] [underline cyan]{os.path.abspath(target_folder)}[/underline cyan]\n"
-        f"• [bold]Manifest:[/] [dim]{os.path.join(target_folder, 'manifest.json')}[/dim]",
-        title="[bold green]Harvest Summary[/bold green]",
-        border_style="green"
-    )
-    console.print(summary_panel)
+    if json_mode:
+        payload = {
+            "status": "completed",
+            "source_url": url,
+            "target_folder": os.path.abspath(target_folder),
+            "manifest_file": os.path.abspath(os.path.join(target_folder, "manifest.json")),
+            "summary_file": os.path.abspath(os.path.join(target_folder, "summary.md")),
+            "total_items": len(downloaded),
+            "success": success_count,
+            "skipped": skipped_count,
+            "failed": failed_count,
+            "total_mb": round(total_mb, 2)
+        }
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        summary_panel = Panel(
+            f"[bold green]✔ Download Complete![/bold green]\n\n"
+            f"• [bold]New Saved Files:[/] [green]{success_count}[/green] files ({total_mb:.2f} MB)\n"
+            f"• [bold]Skipped:[/] [yellow]{skipped_count}[/yellow] ({already_exist_count} already existed on disk)\n"
+            f"• [bold]Failed:[/] [red]{failed_count}[/red]\n"
+            f"• [bold]Destination:[/] [underline cyan]{os.path.abspath(target_folder)}[/underline cyan]\n"
+            f"• [bold]Manifest:[/] [dim]{os.path.join(target_folder, 'manifest.json')}[/dim]",
+            title="[bold green]Harvest Summary[/bold green]",
+            border_style="green"
+        )
+        console.print(summary_panel)
 
 @click.option("--stats", is_flag=True, help="Show per-type statistics table after scanning")
 @click.option("--retry", default=3, help="Number of retry attempts per file (default: 3)")
 @click.option("--config", "config_file", default=None, help="Load defaults from a JSON config file")
+@click.option("--json", "json_output", is_flag=True, help="Output machine-readable JSON format for AI agents and scripts")
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.argument("target_url", required=False)
 @click.option("-e", "--ext", default=None, help="Filter by file extension(s), e.g. webp, jpg, png, mp4")
@@ -410,14 +462,19 @@ def main(
     dry_run: bool,
     stats: bool,
     retry: int,
-    config_file: Optional[str]
+    config_file: Optional[str],
+    json_output: bool
 ):
-    console.print(BANNER)
+    if not json_output:
+        console.print(BANNER)
 
     # --- Load JSON config file if provided ---
     if config_file:
         if not os.path.exists(config_file):
-            console.print(f"[bold red]Config file not found:[/] {config_file}")
+            if json_output:
+                print(json.dumps({"status": "error", "message": f"Config file not found: {config_file}"}))
+            else:
+                console.print(f"[bold red]Config file not found:[/] {config_file}")
             sys.exit(1)
         try:
             with open(config_file, "r", encoding="utf-8") as _cf:
@@ -433,32 +490,10 @@ def main(
             if _cfg.get("timestamp"): timestamp = True
             if _cfg.get("overwrite"): overwrite = True
         except json.JSONDecodeError as _je:
-            console.print(f"[bold red]Invalid JSON config:[/] {_je}")
-            sys.exit(1)
-    # --- Load config file (JSON) if provided ---
-    if config_file:
-        if not os.path.exists(config_file):
-            console.print(f"[bold red]Config file not found:[/] {config_file}")
-            sys.exit(1)
-        try:
-            with open(config_file, "r", encoding="utf-8") as _cf:
-                _cfg = json.load(_cf)
-            ext = ext or _cfg.get("ext")
-            media_type = media_type or _cfg.get("type")
-            min_size = min_size or _cfg.get("min_size")
-            output = _cfg.get("output", output)
-            concurrency = _cfg.get("concurrency", concurrency)
-            retry = _cfg.get("retry", retry)
-            if _cfg.get("yes"):
-                yes = True
-            if _cfg.get("prefix"):
-                prefix = True
-            if _cfg.get("timestamp"):
-                timestamp = True
-            if _cfg.get("overwrite"):
-                overwrite = True
-        except json.JSONDecodeError as _je:
-            console.print(f"[bold red]Invalid JSON config:[/] {_je}")
+            if json_output:
+                print(json.dumps({"status": "error", "message": f"Invalid JSON config: {_je}"}))
+            else:
+                console.print(f"[bold red]Invalid JSON config:[/] {_je}")
             sys.exit(1)
 
     if target_url and target_url.strip().lower() in ['help', 'guide', 'man']:
@@ -523,7 +558,8 @@ def main(
             use_timestamp=timestamp,
             overwrite=overwrite,
             show_stats=stats,
-            max_retries=retry
+            max_retries=retry,
+            json_mode=json_output
         )
 
 if __name__ == "__main__":
