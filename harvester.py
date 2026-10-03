@@ -34,7 +34,7 @@ BANNER = r"""[bold cyan]
  | |  | |  __/ (_| | | (_| | | | | | (_| | |   \ V /  __/\__ \__ \ ||  __/ |   
  |_|  |_|\___|\__,_|_|\__,_| |_| |_|\__,_|_|    \_/ \___||___/___/\__\___|_|   
 [/bold cyan]
-[bold bright_black]  ⚡ Universal Media Scraper & Batch Downloader v1.1.0[/bold bright_black]
+[bold bright_black]  ⚡ Universal Media Scraper & Batch Downloader v1.3.0[/bold bright_black]
 """
 
 def print_help_guide():

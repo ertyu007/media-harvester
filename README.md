@@ -4,7 +4,7 @@
 
 > **Universal Media Scraper & Batch Downloader** — CLI tool ดูดรูป วิดีโอ เสียง เอกสาร จากเว็บใดก็ได้
 
-[![Version](https://img.shields.io/badge/version-v1.2.0-brightgreen?style=flat-square)](https://github.com/ertyu007/media-harvester)
+[![Version](https://img.shields.io/badge/version-v1.3.0-brightgreen?style=flat-square)](https://github.com/ertyu007/media-harvester)
 [![Python](https://img.shields.io/badge/python-3.10+-blue?style=flat-square&logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
 
@@ -182,6 +182,13 @@ downloads/
 ---
 
 ## Changelog
+
+### v1.3.0 — Beast Mode & GUI
+- Chrome TLS impersonation — ดูดเว็บกันบอทได้ (pixabay/pexels/unsplash)
+- tkinter GUI — `python gui.py` หรือ `run-gui.bat`, มี exe แยก (`-Gui`)
+- แยกโฟลเดอร์ตามสกุลไฟล์ (`images/webp/`, `images/jpg/`)
+- Magic-byte extension fix — เซิร์ฟเวอร์แปะป้าย Content-Type ผิดก็ได้ชื่อถูก
+- Interactive loop + HttpOnly cookies + `run.bat`/`run-gui.bat` launchers
 
 ### v1.2.0 — Toolkit Standards & AI Agent Skill
 - Environment Diagnostics — เพิ่ม `scripts/check_environment.py` ตรวจ Python, dependencies, disk space และ network
