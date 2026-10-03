@@ -61,6 +61,25 @@ def resolve_extension_from_mime(content_type: str, current_ext: str) -> Optional
         # Valid media: return the proper extension
         return MIME_TO_EXT.get(mime, current_ext)
 
+def sniff_ext_from_magic(filepath: str) -> Optional[str]:
+    """Read magic bytes and return the true image extension, or None if unknown."""
+    try:
+        with open(filepath, "rb") as f:
+            head = f.read(16)
+    except OSError:
+        return None
+    if head[0:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return ".webp"
+    if head[0:3] == b"\xff\xd8\xff":
+        return ".jpg"
+    if head[0:8] == b"\x89PNG\r\n\x1a\n":
+        return ".png"
+    if head[0:6] in (b"GIF87a", b"GIF89a"):
+        return ".gif"
+    if head[0:2] == b"BM":
+        return ".bmp"
+    return None
+
 def compute_file_hash(filepath: str) -> str:
     """Compute SHA-256 hash of a file on disk."""
     hasher = hashlib.sha256()
@@ -186,6 +205,16 @@ class MediaDownloader:
                 item.download_status = "skipped"
                 item.error_message = f"Size {downloaded_size}B < min {self.min_size_bytes}B"
                 return item
+
+            # --- Magic-byte extension fix (server may mislabel Content-Type) ---
+            sniffed = sniff_ext_from_magic(temp_path)
+            if sniffed and sniffed != (item.extension or "").lower():
+                base, _ = os.path.splitext(dest_path)
+                dest_path = base + sniffed
+                new_temp = dest_path + ".tmp"
+                os.rename(temp_path, new_temp)
+                temp_path = new_temp
+                item.extension = sniffed
 
             # --- Deduplication by content hash ---
             content_hash = hasher.hexdigest()
