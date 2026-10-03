@@ -135,6 +135,19 @@ class MediaExtractor:
         
     def fetch_html(self, url: str) -> Tuple[str, str, httpx.Response]:
         last_error = None
+
+        # Primary: Chrome-impersonated request (beats TLS-fingerprint blocks)
+        try:
+            from curl_cffi import requests as imp_requests
+            r = imp_requests.get(
+                url, impersonate="chrome", cookies=self.cookies,
+                allow_redirects=True, timeout=self.timeout,
+            )
+            r.raise_for_status()
+            return str(r.url), r.text, r
+        except Exception as e:
+            last_error = e
+
         headers_to_try = [self.headers] + [
             {**self.headers, "User-Agent": ua} for ua in FALLBACK_USER_AGENTS
         ]

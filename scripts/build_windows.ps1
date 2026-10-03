@@ -55,6 +55,7 @@ $PyArgs = @(
     "--add-data", "core;core"
     "--add-data", "skills;skills"
     "--collect-all", "httpx"
+    "--collect-all", "curl_cffi"
     "--collect-all", "bs4"
     "--collect-all", "lxml"
     "--collect-all", "PIL"
