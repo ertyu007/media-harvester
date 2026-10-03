@@ -1,0 +1,126 @@
+import os
+import json
+import re
+import datetime
+import urllib.parse
+from typing import List, Dict, Any, Optional
+from core.models import MediaItem, MediaType, ScrapeResult
+
+def sanitize_filename(filename: str, max_length: int = 120) -> str:
+    # Remove invalid filesystem characters
+    name, ext = os.path.splitext(filename)
+    clean_name = re.sub(r'[\\/*?:"<>|]', '_', name).strip()
+    clean_name = re.sub(r'\s+', '_', clean_name)
+    if len(clean_name) > max_length:
+        clean_name = clean_name[:max_length]
+    return f"{clean_name}{ext}"
+
+class MediaOrganizer:
+    def __init__(self, base_output_dir: str = "downloads"):
+        self.base_output_dir = base_output_dir
+
+    def create_destination_structure(
+        self,
+        source_url: str,
+        custom_folder_name: Optional[str] = None,
+        use_timestamp: bool = False
+    ) -> str:
+        parsed = urllib.parse.urlparse(source_url)
+        domain = parsed.netloc.replace(":", "_").replace("www.", "")
+        
+        if custom_folder_name:
+            folder_name = custom_folder_name
+        elif use_timestamp:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            folder_name = f"{domain}_{timestamp}"
+        else:
+            folder_name = domain
+            
+        target_dir = os.path.join(self.base_output_dir, folder_name)
+        
+        # Create subdirectories
+        for m_type in MediaType:
+            os.makedirs(os.path.join(target_dir, m_type.value), exist_ok=True)
+            
+        return target_dir
+
+    def get_destination_filepath(
+        self,
+        target_dir: str,
+        item: MediaItem,
+        index: int = 1,
+        prefix_index: bool = False
+    ) -> str:
+        clean_name = sanitize_filename(item.original_filename)
+        if prefix_index:
+            clean_name = f"{index:03d}_{clean_name}"
+            
+        dest_path = os.path.join(target_dir, item.media_type.value, clean_name)
+        return dest_path
+
+    def write_manifest(self, target_dir: str, result: ScrapeResult, downloaded_items: List[MediaItem]):
+        manifest_path = os.path.join(target_dir, "manifest.json")
+        summary_md_path = os.path.join(target_dir, "summary.md")
+        
+        # Load existing manifest if present to merge
+        existing_items = []
+        if os.path.exists(manifest_path):
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    old_data = json.load(f)
+                    existing_items = old_data.get("items", [])
+            except Exception:
+                existing_items = []
+
+        seen_paths = set()
+        combined_items = []
+        
+        # Add new items first
+        for item in downloaded_items:
+            rel_path = os.path.relpath(item.saved_path, target_dir) if item.saved_path else None
+            if rel_path:
+                seen_paths.add(rel_path)
+            combined_items.append({
+                "url": item.url,
+                "type": item.media_type.value,
+                "status": item.download_status,
+                "saved_path": rel_path,
+                "file_size": item.file_size,
+                "error": item.error_message
+            })
+
+        # Append previous unique items
+        for old_item in existing_items:
+            p = old_item.get("saved_path")
+            if p and p not in seen_paths:
+                seen_paths.add(p)
+                combined_items.append(old_item)
+        
+        manifest_data = {
+            "source_url": result.source_url,
+            "last_updated": datetime.datetime.now().isoformat(),
+            "page_title": result.title,
+            "total_items": len(combined_items),
+            "total_downloaded": len([i for i in combined_items if i.get("status") == "success"]),
+            "items": combined_items
+        }
+        
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(manifest_data, f, indent=2, ensure_ascii=False)
+            
+        # Write Markdown summary
+        with open(summary_md_path, "w", encoding="utf-8") as f:
+            f.write(f"# Media Harvest Report\n\n")
+            f.write(f"- **Source URL:** {result.source_url}\n")
+            f.write(f"- **Page Title:** {result.title}\n")
+            f.write(f"- **Last Updated:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"- **Total Saved Files:** {manifest_data['total_downloaded']}\n\n")
+            
+            f.write("## Downloaded Media\n\n")
+            f.write("| # | Type | Filename | Size (KB) |\n")
+            f.write("|---|------|----------|-----------|\n")
+            
+            success_list = [i for i in combined_items if i.get("status") == "success"]
+            for idx, item_data in enumerate(success_list, 1):
+                size_kb = f"{(item_data.get('file_size') or 0) / 1024:.1f}" if item_data.get('file_size') else "N/A"
+                f.write(f"| {idx} | {item_data.get('type')} | `{os.path.basename(item_data.get('saved_path') or '')}` | {size_kb} |\n")
