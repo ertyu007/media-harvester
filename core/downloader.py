@@ -80,6 +80,20 @@ def sniff_ext_from_magic(filepath: str) -> Optional[str]:
         return ".bmp"
     return None
 
+def _move_to_ext_dir(dest_path: str, old_ext: str, new_ext: str) -> str:
+    """
+    Relocate dest_path into the sibling <new_ext> folder when it currently
+    sits in the <old_ext> folder (layout: <type>/<ext>/file). Falls back to
+    a plain extension swap otherwise. Creates the target dir if needed.
+    """
+    parent = os.path.dirname(dest_path)
+    stem = os.path.splitext(os.path.basename(dest_path))[0]
+    if os.path.basename(parent).lower() == old_ext.lstrip(".").lower():
+        new_dir = os.path.join(os.path.dirname(parent), new_ext.lstrip(".").lower())
+        os.makedirs(new_dir, exist_ok=True)
+        return os.path.join(new_dir, stem + new_ext)
+    return os.path.join(parent, stem + new_ext)
+
 def compute_file_hash(filepath: str) -> str:
     """Compute SHA-256 hash of a file on disk."""
     hasher = hashlib.sha256()
@@ -171,8 +185,7 @@ class MediaDownloader:
 
             # Fix extension mismatch (e.g. URL says .jpg but server says image/webp)
             if correct_ext and correct_ext != item.extension:
-                base, _ = os.path.splitext(dest_path)
-                dest_path = base + correct_ext
+                dest_path = _move_to_ext_dir(dest_path, item.extension, correct_ext)
                 item.extension = correct_ext
 
             # --- Content-Length pre-check ---
@@ -209,11 +222,11 @@ class MediaDownloader:
             # --- Magic-byte extension fix (server may mislabel Content-Type) ---
             sniffed = sniff_ext_from_magic(temp_path)
             if sniffed and sniffed != (item.extension or "").lower():
-                base, _ = os.path.splitext(dest_path)
-                dest_path = base + sniffed
-                new_temp = dest_path + ".tmp"
+                new_dest = _move_to_ext_dir(dest_path, item.extension or "", sniffed)
+                new_temp = new_dest + ".tmp"
                 os.rename(temp_path, new_temp)
                 temp_path = new_temp
+                dest_path = new_dest
                 item.extension = sniffed
 
             # --- Deduplication by content hash ---

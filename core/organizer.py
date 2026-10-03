@@ -90,7 +90,9 @@ class MediaOrganizer:
         if prefix_index:
             clean_name = f"{index:03d}_{clean_name}"
 
-        type_dir = os.path.join(target_dir, item.media_type.value)
+        ext = os.path.splitext(clean_name)[1].lower().lstrip(".") or "other"
+        type_dir = os.path.join(target_dir, item.media_type.value, ext)
+        os.makedirs(type_dir, exist_ok=True)
         stem, ext = os.path.splitext(clean_name)
 
         # --- In-memory dedup key ---
