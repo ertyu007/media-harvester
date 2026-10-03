@@ -5,15 +5,23 @@
 
 param(
     [switch]$Clean,
-    [switch]$Onefile
+    [switch]$Onefile,
+    [switch]$Gui
 )
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path $PSScriptRoot -Parent
 $DistDir     = Join-Path $ProjectRoot "dist"
 $BuildDir    = Join-Path $ProjectRoot "build"
-$SpecFile    = Join-Path $ProjectRoot "harvester.spec"
 $EntryPoint  = Join-Path $ProjectRoot "harvester.py"
+$AppName      = "media-harvester"
+$ExtraArgs    = @()
+if ($Gui) {
+    $EntryPoint = Join-Path $ProjectRoot "gui.py"
+    $AppName    = "media-harvester-gui"
+    $ExtraArgs  = @("--windowed")
+}
+$SpecFile = Join-Path $ProjectRoot "$AppName.spec"
 
 Write-Host "=== Media Harvester Windows Build ===" -ForegroundColor Cyan
 
@@ -49,7 +57,7 @@ if ($Clean) {
 # ----------------------------------------------------------
 $PyArgs = @(
     $EntryPoint
-    "--name", "media-harvester"
+    "--name", $AppName
     "--clean"
     "--noconfirm"
     "--add-data", "core;core"
@@ -71,6 +79,7 @@ if ($Onefile) {
     Write-Host "[*] Building one-directory bundle (faster startup)..." -ForegroundColor Yellow
     $PyArgs += "--onedir"
 }
+$PyArgs += $ExtraArgs
 
 Push-Location $ProjectRoot
 if ($Python) { & $Python -m PyInstaller @PyArgs } else { pyinstaller @PyArgs }
@@ -80,9 +89,9 @@ Pop-Location
 # 3. Done
 # ----------------------------------------------------------
 $Exe = if ($Onefile) {
-    Join-Path $DistDir "media-harvester.exe"
+    Join-Path $DistDir "$AppName.exe"
 } else {
-    Join-Path $DistDir "media-harvester\media-harvester.exe"
+    Join-Path $DistDir "$AppName\$AppName.exe"
 }
 
 if (Test-Path $Exe) {

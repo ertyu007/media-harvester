@@ -160,6 +160,11 @@ class HarvesterGUI:
 
 def main():
     root = tk.Tk()
+    style = ttk.Style()
+    for theme in ("vista", "clam"):  # native Windows look ก่อน
+        if theme in style.theme_names():
+            style.theme_use(theme)
+            break
     HarvesterGUI(root)
     root.mainloop()
 
