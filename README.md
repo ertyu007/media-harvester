@@ -1,6 +1,6 @@
-﻿# 🎯 Media Harvester
+﻿# Media Harvester
 
-> **Universal Media Scraper & Batch Downloader** — CLI tool ดูดรูป วิดีโอ เสียง เอกสาร จากเว็บใดก็ได้ ด้วยความเร็วสูงสุด
+> **Universal Media Scraper & Batch Downloader** — CLI tool ดูดรูป วิดีโอ เสียง เอกสาร จากเว็บใดก็ได้
 
 [![Version](https://img.shields.io/badge/version-v1.1.0-brightgreen?style=flat-square)](https://github.com/ertyu007/media-harvester)
 [![Python](https://img.shields.io/badge/python-3.10+-blue?style=flat-square&logo=python)](https://python.org)
@@ -8,26 +8,26 @@
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Details |
 |---------|---------|
-| 🔍 **Universal Extraction** | `<img>`, `srcset`, `<picture>`, `<video>`, `<audio>`, `<a href>`, CSS `background-image` |
-| 🧠 **Smart Dedup** | ตรวจ content hash (SHA-256) ทั้ง in-session และ on-disk |
-| 🏷️ **Filename Collision Fix** | `image.jpg` → `image_2.jpg` → `image_3.jpg` อัตโนมัติ |
-| 🔒 **Content-Type Validation** | เช็ก MIME type ก่อนเซฟ — ป้องกันดาวน์โหลด HTML/JSON ผิด |
-| 🔁 **Exponential Backoff Retry** | retry 403/429 พร้อม delay ทวีคูณ (configurable) |
-| ⚡ **Async Downloads** | Concurrent downloads ด้วย `httpx` + `asyncio` |
-| 📊 **Statistics Table** | `--stats` แสดงจำนวนสื่อแยกประเภท |
-| 📋 **Manifest & Summary** | `manifest.json` + `summary.md` อัตโนมัติหลังดาวน์โหลด |
-| ⚙️ **JSON Config File** | `--config config.json` โหลด default settings จากไฟล์ |
-| 🎯 **Smart Filtering** | กรองด้วย extension, media type, ขนาดไฟล์ขั้นต่ำ |
-| 🖼️ **High-Res Detection** | ลบ WordPress `-300x200` suffix อัตโนมัติ |
-| 📁 **Batch URL Support** | ป้อน URLs เป็น list file ด้วย `-f urls.txt` |
+| **Universal Extraction** | `<img>`, `srcset`, `<picture>`, `<video>`, `<audio>`, `<a href>`, CSS `background-image` |
+| **Smart Dedup** | ตรวจ content hash (SHA-256) ทั้ง in-session และ on-disk |
+| **Filename Collision Fix** | `image.jpg` → `image_2.jpg` → `image_3.jpg` อัตโนมัติ |
+| **Content-Type Validation** | เช็ก MIME type ก่อนเซฟ — ป้องกันดาวน์โหลด HTML/JSON ผิด |
+| **Exponential Backoff Retry** | retry 403/429 พร้อม delay ทวีคูณ (configurable) |
+| **Async Downloads** | Concurrent downloads ด้วย `httpx` + `asyncio` |
+| **Statistics Table** | `--stats` แสดงจำนวนสื่อแยกประเภท |
+| **Manifest & Summary** | `manifest.json` + `summary.md` อัตโนมัติหลังดาวน์โหลด |
+| **JSON Config File** | `--config config.json` โหลด default settings จากไฟล์ |
+| **Smart Filtering** | กรองด้วย extension, media type, ขนาดไฟล์ขั้นต่ำ |
+| **High-Res Detection** | ลบ WordPress `-300x200` suffix อัตโนมัติ |
+| **Batch URL Support** | ป้อน URLs เป็น list file ด้วย `-f urls.txt` |
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 git clone https://github.com/ertyu007/media-harvester.git
@@ -40,7 +40,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🚀 Usage
+## Usage
 
 ### Basic
 
@@ -105,7 +105,7 @@ python harvester.py https://example.com --retry 5
 
 ---
 
-## 🛠️ All Options
+## All Options
 
 ```
 Usage: harvester.py [OPTIONS] [TARGET_URL]
@@ -130,7 +130,7 @@ Options:
 
 ---
 
-## 📁 Output Structure
+## Output Structure
 
 ```
 downloads/
@@ -138,25 +138,25 @@ downloads/
     ├── images/
     │   ├── hero-photo.jpg
     │   ├── logo.png
-    │   └── banner_2.png       ← auto-renamed on collision
+    │   └── banner_2.png       <- auto-renamed on collision
     ├── videos/
     ├── audio/
     ├── documents/
-    ├── manifest.json          ← full download metadata
-    └── summary.md             ← human-readable report
+    ├── manifest.json          <- full download metadata
+    └── summary.md             <- human-readable report
 ```
 
 ---
 
-## 🔄 Changelog
+## Changelog
 
 ### v1.1.0 — Reliability & Quality
-- ✅ **Filename collision fix** — `image.jpg` → `image_2.jpg` (in-memory + on-disk)
-- ✅ **Content-Type validation** — reject HTML/JSON, auto-fix extension mismatch
-- ✅ **Exponential backoff retry** — configurable `--retry N`
-- ✅ **`--stats` flag** — per-type statistics table
-- ✅ **`--config FILE`** — load settings from JSON config file
-- ✅ Improved progress bar with `N/M` file counter
+- Filename collision fix — `image.jpg` -> `image_2.jpg` (in-memory + on-disk)
+- Content-Type validation — reject HTML/JSON, auto-fix extension mismatch
+- Exponential backoff retry — configurable `--retry N`
+- `--stats` flag — per-type statistics table
+- `--config FILE` — load settings from JSON config file
+- Improved progress bar with `N/M` file counter
 
 ### v1.0.0 — Initial Release
 - Universal media extraction from any webpage
@@ -167,9 +167,9 @@ downloads/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Pull requests are welcome! For major changes, please open an issue first.
+Pull requests are welcome. For major changes, please open an issue first.
 
 ```bash
 git checkout -b feat/your-feature
@@ -179,6 +179,6 @@ git push origin feat/your-feature
 
 ---
 
-## 📄 License
+## License
 
 MIT © [ertyu007](https://github.com/ertyu007)
