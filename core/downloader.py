@@ -84,7 +84,10 @@ class MediaDownloader:
         concurrency: int = 6,
         timeout: float = 30.0,
         min_size_bytes: int = 0,
+        min_width: int = 0,
+        min_height: int = 0,
         headers: Optional[dict] = None,
+        cookies: Optional[dict] = None,
         overwrite: bool = False,
         max_retries: int = 3,
         retry_delay: float = 1.5,   # seconds; doubles each attempt (exponential backoff)
@@ -92,7 +95,10 @@ class MediaDownloader:
         self.concurrency = concurrency
         self.timeout = timeout
         self.min_size_bytes = min_size_bytes
+        self.min_width = min_width
+        self.min_height = min_height
         self.headers = headers or DEFAULT_HEADERS
+        self.cookies = cookies or {}
         self.overwrite = overwrite
         self.max_retries = max_retries
         self.retry_delay = retry_delay
@@ -190,6 +196,24 @@ class MediaDownloader:
                 return item
 
             self.seen_content_hashes.add(content_hash)
+
+            # --- Image Resolution Filter ---
+            if self.min_width > 0 or self.min_height > 0:
+                if item.extension.lower() in ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.avif', '.tiff'):
+                    try:
+                        from PIL import Image
+                        with Image.open(temp_path) as img:
+                            w, h = img.size
+                        if (self.min_width > 0 and w < self.min_width) or \
+                           (self.min_height > 0 and h < self.min_height):
+                            _safe_remove(temp_path)
+                            item.download_status = "skipped"
+                            item.error_message = f"Resolution {w}x{h} < min {self.min_width}x{self.min_height}"
+                            return item
+                        item.width = w
+                        item.height = h
+                    except Exception:
+                        pass  # Non-image or corrupt — let it through
 
             # --- Commit ---
             if os.path.exists(dest_path):
@@ -306,6 +330,7 @@ class MediaDownloader:
                 limits=limits,
                 follow_redirects=True,
                 timeout=self.timeout,
+                cookies=self.cookies,
             ) as client:
 
                 async def worker(item: MediaItem, idx: int):
@@ -339,3 +364,26 @@ def _safe_remove(path: str):
             os.remove(path)
     except OSError:
         pass
+
+
+def load_cookies_file(cookie_file: str) -> dict:
+    """
+    Load a Netscape-format cookies.txt file and return a dict of {name: value}.
+    Lines starting with '#' or empty lines are skipped.
+    Fields: domain, flag, path, secure, expiry, name, value
+    """
+    cookies: dict = {}
+    try:
+        with open(cookie_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                parts = line.split('\t')
+                if len(parts) >= 7:
+                    name, value = parts[5], parts[6]
+                    cookies[name] = value
+    except Exception:
+        pass
+    return cookies
+

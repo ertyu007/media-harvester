@@ -21,7 +21,7 @@ from rich import box
 
 from core.extractor import MediaExtractor
 from core.organizer import MediaOrganizer
-from core.downloader import MediaDownloader
+from core.downloader import MediaDownloader, load_cookies_file
 from core.models import MediaItem, MediaType, ScrapeResult
 
 console = Console()
@@ -283,14 +283,23 @@ def process_single_url(
     overwrite: bool,
     show_stats: bool = False,
     max_retries: int = 3,
-    json_mode: bool = False
+    json_mode: bool = False,
+    min_width: int = 0,
+    min_height: int = 0,
+    cookies: Optional[dict] = None,
+    depth: int = 0,
+    create_zip: bool = False
 ):
     if not json_mode:
-        console.print(f"\n[bold green]► Scanning:[/] [cyan]{url}[/cyan]")
-    
-    extractor = MediaExtractor()
+        depth_note = f" [dim](depth={depth})[/dim]" if depth > 0 else ""
+        console.print(f"\n[bold green]► Scanning:[/] [cyan]{url}[/cyan]{depth_note}")
+
+    extractor = MediaExtractor(cookies=cookies or {})
     try:
-        result = extractor.extract(url)
+        if depth > 0:
+            result = extractor.extract_recursive(url, depth=depth)
+        else:
+            result = extractor.extract(url)
     except Exception as e:
         if json_mode:
             print(json.dumps({"status": "error", "message": f"Failed to fetch/parse URL: {e}", "url": url}, ensure_ascii=False))
@@ -383,6 +392,9 @@ def process_single_url(
     downloader = MediaDownloader(
         concurrency=concurrency,
         min_size_bytes=min_size_bytes,
+        min_width=min_width,
+        min_height=min_height,
+        cookies=cookies or {},
         overwrite=overwrite,
         max_retries=max_retries
     )
@@ -394,6 +406,13 @@ def process_single_url(
 
     # Write Manifest & Summary
     organizer.write_manifest(target_folder, result, downloaded)
+
+    # Create Zip Archive if requested
+    zip_path = None
+    if create_zip:
+        zip_path = organizer.create_zip_archive(target_folder)
+        if not json_mode:
+            console.print(f"[bold]🗜 Archive:[/] [green]{os.path.abspath(zip_path)}[/green]")
 
     # Summary calculations
     success_count = sum(1 for i in downloaded if i.download_status == "success")
@@ -434,6 +453,11 @@ def process_single_url(
 @click.option("--retry", default=3, help="Number of retry attempts per file (default: 3)")
 @click.option("--config", "config_file", default=None, help="Load defaults from a JSON config file")
 @click.option("--json", "json_output", is_flag=True, help="Output machine-readable JSON format for AI agents and scripts")
+@click.option("--min-width", default=0, help="Minimum image width in pixels (e.g. 1920)")
+@click.option("--min-height", default=0, help="Minimum image height in pixels (e.g. 1080)")
+@click.option("--cookies", "cookie_file", default=None, help="Netscape-format cookies.txt file for authenticated sites")
+@click.option("--depth", default=0, help="Recursively crawl same-domain links up to N levels deep (default: 0 = single page)")
+@click.option("--zip", "create_zip", is_flag=True, help="Compress downloaded folder into a .zip archive after completion")
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.argument("target_url", required=False)
 @click.option("-e", "--ext", default=None, help="Filter by file extension(s), e.g. webp, jpg, png, mp4")
@@ -463,10 +487,25 @@ def main(
     stats: bool,
     retry: int,
     config_file: Optional[str],
-    json_output: bool
+    json_output: bool,
+    min_width: int,
+    min_height: int,
+    cookie_file: Optional[str],
+    depth: int,
+    create_zip: bool
 ):
     if not json_output:
         console.print(BANNER)
+
+    # --- Load cookies if file provided ---
+    cookies: dict = {}
+    if cookie_file:
+        if not os.path.exists(cookie_file):
+            console.print(f"[bold red]Cookies file not found:[/] {cookie_file}")
+            sys.exit(1)
+        cookies = load_cookies_file(cookie_file)
+        if not json_output:
+            console.print(f"[dim]🍪 Loaded {len(cookies)} cookies from {cookie_file}[/dim]")
 
     # --- Load JSON config file if provided ---
     if config_file:
@@ -559,7 +598,12 @@ def main(
             overwrite=overwrite,
             show_stats=stats,
             max_retries=retry,
-            json_mode=json_output
+            json_mode=json_output,
+            min_width=min_width,
+            min_height=min_height,
+            cookies=cookies,
+            depth=depth,
+            create_zip=create_zip
         )
 
 if __name__ == "__main__":

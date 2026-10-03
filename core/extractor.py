@@ -128,9 +128,10 @@ def enhance_highres_url(url: str) -> str:
     return url
 
 class MediaExtractor:
-    def __init__(self, timeout: float = 15.0, headers: Optional[dict] = None):
+    def __init__(self, timeout: float = 15.0, headers: Optional[dict] = None, cookies: Optional[dict] = None):
         self.timeout = timeout
         self.headers = headers or DEFAULT_HEADERS
+        self.cookies = cookies or {}
         
     def fetch_html(self, url: str) -> Tuple[str, str, httpx.Response]:
         last_error = None
@@ -140,7 +141,7 @@ class MediaExtractor:
         
         for h in headers_to_try:
             try:
-                with httpx.Client(headers=h, follow_redirects=True, timeout=self.timeout) as client:
+                with httpx.Client(headers=h, cookies=self.cookies, follow_redirects=True, timeout=self.timeout) as client:
                     response = client.get(url)
                     response.raise_for_status()
                     final_url = str(response.url)
@@ -285,5 +286,69 @@ class MediaExtractor:
             source_url=final_url,
             title=page_title,
             items=items,
+            stats=stats
+        )
+
+    def extract_internal_links(self, html: str, base_url: str) -> List[str]:
+        """Extract all same-domain internal <a href> links from a page."""
+        soup = BeautifulSoup(html, 'lxml')
+        base_parsed = urllib.parse.urlparse(base_url)
+        links = []
+        for a in soup.find_all('a', href=True):
+            href = urllib.parse.urljoin(base_url, a['href'].strip())
+            parsed = urllib.parse.urlparse(href)
+            # Only same domain, no fragments, no JS
+            if parsed.netloc == base_parsed.netloc and parsed.scheme in ('http', 'https'):
+                clean = parsed._replace(fragment='', query='').geturl()
+                links.append(clean)
+        return list(dict.fromkeys(links))  # deduplicate preserving order
+
+    def extract_recursive(self, start_url: str, depth: int = 1) -> ScrapeResult:
+        """
+        Recursively crawl same-domain pages up to *depth* levels deep.
+        Returns a merged ScrapeResult containing items from all discovered pages.
+        """
+        visited_pages: Set[str] = set()
+        all_items: List[MediaItem] = []
+        all_seen_urls: Set[str] = set()
+        root_title = start_url
+
+        def crawl(url: str, current_depth: int):
+            nonlocal root_title
+            if url in visited_pages or current_depth < 0:
+                return
+            visited_pages.add(url)
+
+            try:
+                final_url, html, _ = self.fetch_html(url)
+            except Exception:
+                return
+
+            result = self.extract_from_html(html, final_url)
+            if current_depth == depth:
+                root_title = result.title  # title from entry page
+
+            # Merge unique items
+            for item in result.items:
+                if item.url not in all_seen_urls:
+                    all_seen_urls.add(item.url)
+                    all_items.append(item)
+
+            # Recurse into linked pages
+            if current_depth > 0:
+                child_links = self.extract_internal_links(html, final_url)
+                for link in child_links:
+                    crawl(link, current_depth - 1)
+
+        crawl(start_url, depth)
+
+        stats: dict = {}
+        for item in all_items:
+            stats[item.media_type.value] = stats.get(item.media_type.value, 0) + 1
+
+        return ScrapeResult(
+            source_url=start_url,
+            title=root_title,
+            items=all_items,
             stats=stats
         )

@@ -179,3 +179,21 @@ class MediaOrganizer:
             for idx, item_data in enumerate(success_list, 1):
                 size_kb = f"{(item_data.get('file_size') or 0) / 1024:.1f}" if item_data.get('file_size') else "N/A"
                 f.write(f"| {idx} | {item_data.get('type')} | `{os.path.basename(item_data.get('saved_path') or '')}` | {size_kb} |\n")
+
+    def create_zip_archive(self, target_dir: str, output_zip_path: Optional[str] = None) -> str:
+        """
+        Compress the target_dir directory into a .zip file.
+        Returns the path to the created zip file.
+        """
+        import zipfile
+        if not output_zip_path:
+            output_zip_path = f"{target_dir.rstrip(r'\/')}.zip"
+
+        with zipfile.ZipFile(output_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(target_dir):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(full_path, target_dir)
+                    zipf.write(full_path, rel_path)
+
+        return output_zip_path
