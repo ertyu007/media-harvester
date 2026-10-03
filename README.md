@@ -1,3 +1,5 @@
+<img src="assets/header.svg" alt="ertyu007" width="100%" />
+
 # ⚡ Media Harvester CLI
 
 **Media Harvester** คือเครื่องมือ Command Line Interface (CLI) อัตโนมัติสำหรับดึงและดาวน์โหลดไฟล์รูปภาพ วิดีโอ เสียง และเอกสารจากหน้าเว็บไซต์ต่าง ๆ แบบ Batch ด้วยความเร็วสูง (High-Speed Async Parallel Downloader) พร้อมระบบคัดกรอง ป้องกันไฟล์ซ้ำ และจัดระเบียบโฟลเดอร์ให้อัตโนมัติ
@@ -103,6 +105,8 @@ python harvester.py https://example.com --dry-run
 
 ```
 media-harvester/
+├── assets/
+│   └── header.svg       # Banner header image
 ├── core/
 │   ├── __init__.py
 │   ├── models.py        # Data models (MediaItem, ScrapeResult)
