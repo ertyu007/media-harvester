@@ -539,6 +539,7 @@ def main(
         print_help_guide()
         sys.exit(0)
 
+    batch_mode = bool(url_file or target_url)
     urls = []
     if url_file:
         if not os.path.exists(url_file):
@@ -548,8 +549,9 @@ def main(
             urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
     elif target_url:
         urls = [target_url.strip()]
-    else:
-        while True:
+
+    while True:
+        if not batch_mode:
             console.print("[dim]💡 วาง [bold cyan]URL[/bold cyan] ของเว็บที่ต้องการดูด (หรือพิมพ์ [bold cyan]help[/bold cyan] / [bold red]q[/bold red] เพื่อออก)[/dim]")
             entered_url = Prompt.ask("[bold cyan]Enter Webpage URL to Scrape[/bold cyan]")
             entered_clean = entered_url.strip()
@@ -577,34 +579,36 @@ def main(
                 yes = True
                 
             urls = [parsed_url]
+
+        min_size_bytes = parse_size_str(min_size) if min_size else 0
+
+        for u in urls:
+            if not u.startswith(("http://", "https://")):
+                u = "https://" + u
+            process_single_url(
+                url=u,
+                output_dir=output,
+                extensions=ext,
+                media_type_filter=media_type,
+                min_size_bytes=min_size_bytes,
+                concurrency=concurrency,
+                auto_confirm=yes,
+                dry_run=dry_run,
+                prefix_index=prefix,
+                use_timestamp=timestamp,
+                overwrite=overwrite,
+                show_stats=stats,
+                max_retries=retry,
+                json_mode=json_output,
+                min_width=min_width,
+                min_height=min_height,
+                cookies=cookies,
+                depth=depth,
+                create_zip=create_zip
+            )
+
+        if batch_mode:
             break
-
-    min_size_bytes = parse_size_str(min_size) if min_size else 0
-
-    for u in urls:
-        if not u.startswith(("http://", "https://")):
-            u = "https://" + u
-        process_single_url(
-            url=u,
-            output_dir=output,
-            extensions=ext,
-            media_type_filter=media_type,
-            min_size_bytes=min_size_bytes,
-            concurrency=concurrency,
-            auto_confirm=yes,
-            dry_run=dry_run,
-            prefix_index=prefix,
-            use_timestamp=timestamp,
-            overwrite=overwrite,
-            show_stats=stats,
-            max_retries=retry,
-            json_mode=json_output,
-            min_width=min_width,
-            min_height=min_height,
-            cookies=cookies,
-            depth=depth,
-            create_zip=create_zip
-        )
 
 if __name__ == "__main__":
     main()
