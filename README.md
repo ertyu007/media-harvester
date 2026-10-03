@@ -1,140 +1,184 @@
-<img src="assets/header.svg" alt="ertyu007" width="100%" />
+﻿# 🎯 Media Harvester
 
-# ⚡ Media Harvester CLI
+> **Universal Media Scraper & Batch Downloader** — CLI tool ดูดรูป วิดีโอ เสียง เอกสาร จากเว็บใดก็ได้ ด้วยความเร็วสูงสุด
 
-**Media Harvester** คือเครื่องมือ Command Line Interface (CLI) อัตโนมัติสำหรับดึงและดาวน์โหลดไฟล์รูปภาพ วิดีโอ เสียง และเอกสารจากหน้าเว็บไซต์ต่าง ๆ แบบ Batch ด้วยความเร็วสูง (High-Speed Async Parallel Downloader) พร้อมระบบคัดกรอง ป้องกันไฟล์ซ้ำ และจัดระเบียบโฟลเดอร์ให้อัตโนมัติ
-
----
-
-## ✨ คุณสมบัติเด่น (Features)
-
-- 🌐 **Universal Media Extraction**:
-  - ดึงรูปภาพทุกรูปแบบ: `<img>`, `srcset` (เลือกภาพความละเอียดสูงสุด), `data-src` (Lazy-load), CSS `background-image`, แท็ก `<a>` ที่ลิงก์ไปยังไฟล์มีเดีย
-  - ดึงวิดีโอและเสียง: `<video>`, `<source>`, `<audio>`
-- ⚡ **High-Speed Parallel Downloader**:
-  - ดาวน์โหลดหลายไฟล์พร้อมกันแบบ Asynchronous ปรับจำนวน Worker ขนานได้
-  - แสดง Progress Bar แบบสดผ่าน Rich Terminal (บอกความเร็ว Speed, ข้อมูลที่โหลดแล้ว, เวลาที่เหลือ ETA)
-- 🛡️ **Zero-Duplicate System (ระบบป้องกันไฟล์ซ้ำ)**:
-  - ตรวจสอบไฟล์ที่มีอยู่แล้วในเครื่องก่อนดาวน์โหลด ช่วยประหยัดแบนด์วิดท์
-  - ตรวจจับเนื้อหาไฟล์ซ้ำด้วย SHA-256 Hash
-- 🎯 **Advanced Filters (ตัวกรองขั้นสูง)**:
-  - กรองตามสกุลไฟล์ (`-e, --ext` เช่น `jpg,webp,png,mp4`)
-  - กรองตามประเภทมีเดีย (`-t, --type` เช่น `images,videos,audio,documents`)
-  - กรองขนาดไฟล์ขั้นต่ำ (`-s, --min-size` เช่น `50kb`, `1mb` ตัดไอคอนจิ๋วทิ้ง)
-- 📂 **Smart Auto-Organizer**:
-  - บันทึกลงโฟลเดอร์แยกตามโดเมนอัตโนมัติ เช่น `downloads/thairath.co.th/images/`
-  - สร้างไฟล์รายงานสรุปผล **`manifest.json`** และ **`summary.md`** ให้ตรวจสอบย้อนหลังได้
-- 🎨 **Rich Interactive UI**:
-  - โหมดถาม-ตอบแบบ Interactive มีตารางพรีวิวและเมนูเลือกไฟล์
-  - ระบบ Smart Auto-Parser รองรับการวางคำสั่งพร้อม Flag ได้โดยไม่ Error
+[![Version](https://img.shields.io/badge/version-v1.1.0-brightgreen?style=flat-square)](https://github.com/ertyu007/media-harvester)
+[![Python](https://img.shields.io/badge/python-3.10+-blue?style=flat-square&logo=python)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
 
 ---
 
-## 📦 การติดตั้ง (Installation)
+## ✨ Features
 
-### 1. โคลนหรือเข้าโฟลเดอร์โปรเจกต์
-```powershell
-cd D:\Dev\media-harvester
-```
+| Feature | Details |
+|---------|---------|
+| 🔍 **Universal Extraction** | `<img>`, `srcset`, `<picture>`, `<video>`, `<audio>`, `<a href>`, CSS `background-image` |
+| 🧠 **Smart Dedup** | ตรวจ content hash (SHA-256) ทั้ง in-session และ on-disk |
+| 🏷️ **Filename Collision Fix** | `image.jpg` → `image_2.jpg` → `image_3.jpg` อัตโนมัติ |
+| 🔒 **Content-Type Validation** | เช็ก MIME type ก่อนเซฟ — ป้องกันดาวน์โหลด HTML/JSON ผิด |
+| 🔁 **Exponential Backoff Retry** | retry 403/429 พร้อม delay ทวีคูณ (configurable) |
+| ⚡ **Async Downloads** | Concurrent downloads ด้วย `httpx` + `asyncio` |
+| 📊 **Statistics Table** | `--stats` แสดงจำนวนสื่อแยกประเภท |
+| 📋 **Manifest & Summary** | `manifest.json` + `summary.md` อัตโนมัติหลังดาวน์โหลด |
+| ⚙️ **JSON Config File** | `--config config.json` โหลด default settings จากไฟล์ |
+| 🎯 **Smart Filtering** | กรองด้วย extension, media type, ขนาดไฟล์ขั้นต่ำ |
+| 🖼️ **High-Res Detection** | ลบ WordPress `-300x200` suffix อัตโนมัติ |
+| 📁 **Batch URL Support** | ป้อน URLs เป็น list file ด้วย `-f urls.txt` |
 
-### 2. สร้าง Virtual Environment และเปิดใช้งาน
-```powershell
+---
+
+## 📦 Installation
+
+```bash
+git clone https://github.com/ertyu007/media-harvester.git
+cd media-harvester
 python -m venv .venv
-.venv\Scripts\activate
-```
-
-### 3. ติดตั้ง Dependencies
-```powershell
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/macOS
 pip install -r requirements.txt
 ```
 
 ---
 
-## 🚀 วิธีการใช้งาน (Usage)
+## 🚀 Usage
 
-### 1. โหมดถาม-ตอบ (Interactive Mode)
-รันคำสั่งเพื่อเปิดโปรแกรม:
-```powershell
+### Basic
+
+```bash
+# Interactive mode
 python harvester.py
-```
-- โปรแกรมจะให้วาง URL ของเว็บที่ต้องการ
-- แสดงตารางรายการไฟล์มีเดียทั้งหมดที่ตรวจพบ
-- สามารถเลือกดาวน์โหลดเฉพาะบางไฟล์ได้ (เช่น พิมพ์ `1,3,5-10`, `webp`, หรือกด Enter เพื่อโหลด `all`)
 
----
+# Scrape a URL directly
+python harvester.py https://example.com
 
-### 2. โหมดคำสั่งด่วน (Direct CLI Mode)
-สามารถระบุ URL และ Option ต่าง ๆ ในคำสั่งเดียวได้ทันที:
-
-```powershell
-# ตัวอย่าง: ดาวน์โหลดเฉพาะรูปภาพ .webp และ .jpg ขนาด > 50KB จากเว็บข่าว
-python harvester.py https://www.sanook.com/news/politic/ -e webp,jpg -s 50kb -y
-
-# ตัวอย่าง: ดาวน์โหลดเฉพาะวิดีโอจากเว็บเป้าหมาย
-python harvester.py https://example.com -t videos -y
-
-# ตัวอย่าง: ดาวน์โหลดแบบ Batch จากไฟล์รายการ URL หลาย ๆ เว็บพร้อมกัน
-python harvester.py -f urls.txt -e jpg,png -s 100kb -y
-
-# ตัวอย่าง: สแกนดูรายการไฟล์ก่อน (ยังไม่ดาวน์โหลดจริง)
-python harvester.py https://example.com --dry-run
+# Dry-run (scan only, no download)
+python harvester.py https://example.com --dry-run --stats
 ```
 
----
+### Filter & Control
 
-## ⚙️ สรุปคำสั่งและ Flags ทั้งหมด (Options Reference)
+```bash
+# Download only images (jpg + png)
+python harvester.py https://example.com -t images -e jpg,png
 
-| Flag / Option | คำอธิบาย | ตัวอย่างการใช้งาน |
-| :--- | :--- | :--- |
-| `-e, --ext` | กรองตามนามสกุลไฟล์ที่ต้องการ | `-e webp,jpg,png` |
-| `-t, --type` | กรองประเภทมีเดีย (`images`, `videos`, `audio`, `documents`) | `-t images,videos` |
-| `-s, --min-size` | กำหนดขนาดไฟล์ขั้นต่ำ (ข้ามไฟล์เล็กกว่าที่ระบุ) | `-s 50kb` หรือ `-s 1mb` |
-| `-o, --output` | กำหนดโฟลเดอร์สำหรับบันทึกไฟล์ (ค่าเริ่มต้น: `./downloads`) | `-o D:\MyDownloads` |
-| `-c, --concurrency` | จำนวนดาวน์โหลดขนานพร้อมกัน (ค่าเริ่มต้น: `6`) | `-c 12` |
-| `-f, --file` | ระบุไฟล์ `.txt` รวมรายการ URL สำหรับดูดแบบ Batch | `-f urls.txt` |
-| `-y, --yes` | ข้ามขั้นตอนถามยืนยัน โหลดทุกรายการทันที | `-y` |
-| `--prefix` | ใส่ตัวเลขลำดับ (`001_`, `002_`) นำหน้าชื่อไฟล์ | `--prefix` |
-| `--timestamp` | สร้างโฟลเดอร์ใหม่แยกตามวันเวลาทุกครั้ง | `--timestamp` |
-| `--overwrite` | บังคับดาวน์โหลดทับไฟล์เดิมที่มีอยู่แล้ว | `--overwrite` |
-| `--dry-run` | สแกนและแสดงตารางรายการไฟล์โดยไม่ดาวน์โหลด | `--dry-run` |
-| `help / -h / --help` | แสดงคู่มือการใช้งานแบบ Rich Terminal | `python harvester.py help` |
+# Minimum file size 100KB, auto-confirm
+python harvester.py https://example.com -s 100kb -y
 
----
+# Custom output folder, 10 concurrent downloads
+python harvester.py https://example.com -o ~/Pictures/harvest -c 10
 
-## 📁 โครงสร้างโปรเจกต์ (Project Structure)
+# Prefix filenames with index numbers
+python harvester.py https://example.com --prefix
 
+# Timestamped subfolder per session
+python harvester.py https://example.com --timestamp
 ```
-media-harvester/
-├── assets/
-│   └── header.svg       # Banner header image
-├── core/
-│   ├── __init__.py
-│   ├── models.py        # Data models (MediaItem, ScrapeResult)
-│   ├── extractor.py     # ระบบ Scraper ดึง Assets พร้อมกรอง Tracking & ขยะ
-│   ├── downloader.py    # ระบบ Async Downloader, Live Progress & Deduplication
-│   └── organizer.py     # จัดการโฟลเดอร์, ป้องกันชื่อซ้ำ, เขียน manifest.json & summary.md
-├── downloads/           # โฟลเดอร์เก็บไฟล์ที่ดาวน์โหลด (แยกตามชื่อโดเมน)
-├── harvester.py         # Entry point หลักของโปรแกรม CLI
-├── requirements.txt     # ไลบรารีที่จำเป็น (rich, httpx, bs4, click, Pillow, lxml)
-└── README.md            # คู่มือการใช้งาน
+
+### Batch & Config
+
+```bash
+# Batch from URL file
+python harvester.py -f urls.txt -y --stats
+
+# Load defaults from JSON config
+python harvester.py --config my_config.json https://example.com
+
+# Override retry count
+python harvester.py https://example.com --retry 5
+```
+
+### Example `config.json`
+
+```json
+{
+  "output": "downloads/art",
+  "ext": "jpg,png,webp",
+  "type": "images",
+  "min_size": "50kb",
+  "concurrency": 8,
+  "retry": 4,
+  "yes": true,
+  "prefix": false,
+  "timestamp": true
+}
 ```
 
 ---
 
-## 📝 ตัวอย่างไฟล์ `urls.txt` (สำหรับ Batch Download)
+## 🛠️ All Options
 
-สร้างไฟล์ `urls.txt` แล้วใส่รายการ URL แต่ละบรรทัด:
-```text
-https://www.sanook.com/news/politic/
-https://www.thairath.co.th/news/foreign
-https://en.wikipedia.org/wiki/Photography
 ```
-จากนั้นรัน:
-```powershell
-python harvester.py -f urls.txt -e webp,jpg -s 50kb -y
+Usage: harvester.py [OPTIONS] [TARGET_URL]
+
+Options:
+  -e, --ext TEXT        Filter extensions (e.g. webp,jpg,mp4)
+  -t, --type TEXT       Filter type: images, videos, audio, documents
+  -s, --min-size TEXT   Min file size (e.g. 50kb, 1mb)
+  -o, --output TEXT     Output directory (default: ./downloads)
+  -c, --concurrency N   Concurrent downloads (default: 6)
+  -f, --file TEXT       Text file with one URL per line
+  -y, --yes             Auto-confirm without prompts
+  --prefix              Prefix filenames: 001_image.jpg
+  --timestamp           New timestamped folder per session
+  --overwrite           Re-download existing files
+  --dry-run             Scan only, no download
+  --stats               Show per-type statistics table
+  --retry N             Retry attempts per file (default: 3)
+  --config FILE         Load defaults from JSON config file
+  -h, --help            Show help message
 ```
 
 ---
 
-## 📜 License
-MIT License
+## 📁 Output Structure
+
+```
+downloads/
+└── example.com/
+    ├── images/
+    │   ├── hero-photo.jpg
+    │   ├── logo.png
+    │   └── banner_2.png       ← auto-renamed on collision
+    ├── videos/
+    ├── audio/
+    ├── documents/
+    ├── manifest.json          ← full download metadata
+    └── summary.md             ← human-readable report
+```
+
+---
+
+## 🔄 Changelog
+
+### v1.1.0 — Reliability & Quality
+- ✅ **Filename collision fix** — `image.jpg` → `image_2.jpg` (in-memory + on-disk)
+- ✅ **Content-Type validation** — reject HTML/JSON, auto-fix extension mismatch
+- ✅ **Exponential backoff retry** — configurable `--retry N`
+- ✅ **`--stats` flag** — per-type statistics table
+- ✅ **`--config FILE`** — load settings from JSON config file
+- ✅ Improved progress bar with `N/M` file counter
+
+### v1.0.0 — Initial Release
+- Universal media extraction from any webpage
+- Async parallel downloads with progress bar
+- Content-hash deduplication
+- Interactive CLI with Prompt selection
+- Manifest + summary report generation
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome! For major changes, please open an issue first.
+
+```bash
+git checkout -b feat/your-feature
+git commit -m "feat: describe your change"
+git push origin feat/your-feature
+```
+
+---
+
+## 📄 License
+
+MIT © [ertyu007](https://github.com/ertyu007)
