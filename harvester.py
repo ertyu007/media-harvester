@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Media Harvester CLI
 Universal Media Scraper & High-Speed Batch Downloader
@@ -7,6 +7,7 @@ Universal Media Scraper & High-Speed Batch Downloader
 import sys
 import os
 import re
+import json
 import urllib.parse
 from typing import List, Optional, Set
 
@@ -33,7 +34,7 @@ BANNER = r"""[bold cyan]
  | |  | |  __/ (_| | | (_| | | | | | (_| | |   \ V /  __/\__ \__ \ ||  __/ |   
  |_|  |_|\___|\__,_|_|\__,_| |_| |_|\__,_|_|    \_/ \___||___/___/\__\___|_|   
 [/bold cyan]
-[bold bright_black]  ⚡ Universal Media Scraper & Batch Downloader v1.0.0[/bold bright_black]
+[bold bright_black]  ⚡ Universal Media Scraper & Batch Downloader v1.1.0[/bold bright_black]
 """
 
 def print_help_guide():
@@ -279,7 +280,9 @@ def process_single_url(
     dry_run: bool,
     prefix_index: bool,
     use_timestamp: bool,
-    overwrite: bool
+    overwrite: bool,
+    show_stats: bool = False,
+    max_retries: int = 3
 ):
     console.print(f"\n[bold green]► Scanning:[/] [cyan]{url}[/cyan]")
     
@@ -295,6 +298,14 @@ def process_single_url(
         return
 
     display_scrape_summary(result)
+    if show_stats:
+        stats_table = Table(title="[bold]Media Statistics[/bold]", box=box.SIMPLE_HEAD)
+        stats_table.add_column("Type", style="cyan")
+        stats_table.add_column("Count", justify="right", style="bold yellow")
+        for mtype, cnt in sorted(result.stats.items()):
+            stats_table.add_row(mtype.capitalize(), str(cnt))
+        stats_table.add_row("[bold]Total[/bold]", f"[bold green]{len(result.items)}[/bold green]")
+        console.print(stats_table)
 
     # Initial filtering if provided via flags
     filtered_items = filter_media_items(result.items, extensions=extensions, media_types=media_type_filter)
@@ -336,7 +347,8 @@ def process_single_url(
     downloader = MediaDownloader(
         concurrency=concurrency,
         min_size_bytes=min_size_bytes,
-        overwrite=overwrite
+        overwrite=overwrite,
+        max_retries=max_retries
     )
 
     def path_resolver(item: MediaItem, idx: int) -> str:
@@ -367,6 +379,9 @@ def process_single_url(
     )
     console.print(summary_panel)
 
+@click.option("--stats", is_flag=True, help="Show per-type statistics table after scanning")
+@click.option("--retry", default=3, help="Number of retry attempts per file (default: 3)")
+@click.option("--config", "config_file", default=None, help="Load defaults from a JSON config file")
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.argument("target_url", required=False)
 @click.option("-e", "--ext", default=None, help="Filter by file extension(s), e.g. webp, jpg, png, mp4")
@@ -392,9 +407,59 @@ def main(
     prefix: bool,
     timestamp: bool,
     overwrite: bool,
-    dry_run: bool
+    dry_run: bool,
+    stats: bool,
+    retry: int,
+    config_file: Optional[str]
 ):
     console.print(BANNER)
+
+    # --- Load JSON config file if provided ---
+    if config_file:
+        if not os.path.exists(config_file):
+            console.print(f"[bold red]Config file not found:[/] {config_file}")
+            sys.exit(1)
+        try:
+            with open(config_file, "r", encoding="utf-8") as _cf:
+                _cfg = json.load(_cf)
+            ext = ext or _cfg.get("ext")
+            media_type = media_type or _cfg.get("type")
+            min_size = min_size or _cfg.get("min_size")
+            output = _cfg.get("output", output)
+            concurrency = _cfg.get("concurrency", concurrency)
+            retry = _cfg.get("retry", retry)
+            if _cfg.get("yes"): yes = True
+            if _cfg.get("prefix"): prefix = True
+            if _cfg.get("timestamp"): timestamp = True
+            if _cfg.get("overwrite"): overwrite = True
+        except json.JSONDecodeError as _je:
+            console.print(f"[bold red]Invalid JSON config:[/] {_je}")
+            sys.exit(1)
+    # --- Load config file (JSON) if provided ---
+    if config_file:
+        if not os.path.exists(config_file):
+            console.print(f"[bold red]Config file not found:[/] {config_file}")
+            sys.exit(1)
+        try:
+            with open(config_file, "r", encoding="utf-8") as _cf:
+                _cfg = json.load(_cf)
+            ext = ext or _cfg.get("ext")
+            media_type = media_type or _cfg.get("type")
+            min_size = min_size or _cfg.get("min_size")
+            output = _cfg.get("output", output)
+            concurrency = _cfg.get("concurrency", concurrency)
+            retry = _cfg.get("retry", retry)
+            if _cfg.get("yes"):
+                yes = True
+            if _cfg.get("prefix"):
+                prefix = True
+            if _cfg.get("timestamp"):
+                timestamp = True
+            if _cfg.get("overwrite"):
+                overwrite = True
+        except json.JSONDecodeError as _je:
+            console.print(f"[bold red]Invalid JSON config:[/] {_je}")
+            sys.exit(1)
 
     if target_url and target_url.strip().lower() in ['help', 'guide', 'man']:
         print_help_guide()
@@ -456,8 +521,11 @@ def main(
             dry_run=dry_run,
             prefix_index=prefix,
             use_timestamp=timestamp,
-            overwrite=overwrite
+            overwrite=overwrite,
+            show_stats=stats,
+            max_retries=retry
         )
 
 if __name__ == "__main__":
     main()
+
