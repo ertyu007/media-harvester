@@ -377,7 +377,11 @@ def load_cookies_file(cookie_file: str) -> dict:
         with open(cookie_file, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line:
+                    continue
+                if line.startswith('#HttpOnly_'):
+                    line = line[len('#HttpOnly_'):]
+                elif line.startswith('#'):
                     continue
                 parts = line.split('\t')
                 if len(parts) >= 7:
