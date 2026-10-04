@@ -310,15 +310,16 @@ class MediaExtractor:
         for a in soup.find_all('a', href=True):
             href = urllib.parse.urljoin(base_url, a['href'].strip())
             parsed = urllib.parse.urlparse(href)
-            # Only same domain, no fragments, no JS
+            # Only same domain, no JS; keep query (often identifies the page, e.g. ?episode_no=3)
             if parsed.netloc == base_parsed.netloc and parsed.scheme in ('http', 'https'):
-                clean = parsed._replace(fragment='', query='').geturl()
+                clean = parsed._replace(fragment='').geturl()
                 links.append(clean)
         return list(dict.fromkeys(links))  # deduplicate preserving order
 
-    def extract_recursive(self, start_url: str, depth: int = 1) -> ScrapeResult:
+    def extract_recursive(self, start_url: str, depth: int = 1, link_pattern: Optional[str] = None) -> ScrapeResult:
         """
         Recursively crawl same-domain pages up to *depth* levels deep.
+        If *link_pattern* is given, only follow links whose URL matches the regex.
         Returns a merged ScrapeResult containing items from all discovered pages.
         """
         visited_pages: Set[str] = set()
@@ -350,6 +351,8 @@ class MediaExtractor:
             # Recurse into linked pages
             if current_depth > 0:
                 child_links = self.extract_internal_links(html, final_url)
+                if link_pattern:
+                    child_links = [l for l in child_links if re.search(link_pattern, l)]
                 for link in child_links:
                     crawl(link, current_depth - 1)
 

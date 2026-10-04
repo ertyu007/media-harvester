@@ -288,6 +288,7 @@ def process_single_url(
     min_height: int = 0,
     cookies: Optional[dict] = None,
     depth: int = 0,
+    link_pattern: Optional[str] = None,
     create_zip: bool = False
 ):
     if not json_mode:
@@ -297,7 +298,7 @@ def process_single_url(
     extractor = MediaExtractor(cookies=cookies or {})
     try:
         if depth > 0:
-            result = extractor.extract_recursive(url, depth=depth)
+            result = extractor.extract_recursive(url, depth=depth, link_pattern=link_pattern)
         else:
             result = extractor.extract(url)
     except Exception as e:
@@ -402,10 +403,40 @@ def process_single_url(
     def path_resolver(item: MediaItem, idx: int) -> str:
         return organizer.get_destination_filepath(target_folder, item, idx, prefix_index=prefix_index)
 
-    downloaded = downloader.run_download(selected_items, path_resolver)
+    def page_slug(page_url: str) -> str:
+        """Short folder name per source page (e.g. viewer?episode_no=3 -> 'ep-3')."""
+        p = urllib.parse.urlparse(page_url or "")
+        qs = urllib.parse.parse_qs(p.query)
+        if "episode_no" in qs and qs["episode_no"]:
+            return f"ep-{qs['episode_no'][0]}"
+        seg = p.path.rstrip("/").split("/")[-1] or "index"
+        extra = "_".join(f"{k}-{v[0]}" for k, v in sorted(qs.items()))[:40]
+        slug = re.sub(r'[\\/*?:"<>|]', "_", f"{seg}_{extra}" if extra else seg)[:80]
+        return slug or "page"
 
-    # Write Manifest & Summary
-    organizer.write_manifest(target_folder, result, downloaded)
+    downloaded = []
+    if depth > 0:
+        # Group by source page -> <domain>/<ep-N>/... (comics: one folder per episode)
+        groups: dict = {}
+        for it in selected_items:
+            groups.setdefault(it.source_page_url or url, []).append(it)
+        for page_url, gitems in groups.items():
+            sub = os.path.join(target_folder, page_slug(page_url))
+            if not json_mode:
+                console.print(f"[dim]  → {page_slug(page_url)} ({len(gitems)} files)[/dim]")
+            dl = downloader.run_download(
+                gitems,
+                lambda item, idx, _sub=sub: organizer.get_destination_filepath(
+                    _sub, item, idx, prefix_index=prefix_index),
+            )
+            organizer.write_manifest(
+                sub, ScrapeResult(source_url=page_url, title=page_url, items=gitems), dl)
+            downloaded.extend(dl)
+    else:
+        downloaded = downloader.run_download(selected_items, path_resolver)
+
+        # Write Manifest & Summary
+        organizer.write_manifest(target_folder, result, downloaded)
 
     # Create Zip Archive if requested
     zip_path = None
@@ -457,6 +488,7 @@ def process_single_url(
 @click.option("--min-height", default=0, help="Minimum image height in pixels (e.g. 1080)")
 @click.option("--cookies", "cookie_file", default=None, help="Netscape-format cookies.txt file for authenticated sites")
 @click.option("--depth", default=0, help="Recursively crawl same-domain links up to N levels deep (default: 0 = single page)")
+@click.option("--match", "link_pattern", default=None, help="Only follow crawl links matching this regex (e.g. 'viewer' for webtoon episodes)")
 @click.option("--zip", "create_zip", is_flag=True, help="Compress downloaded folder into a .zip archive after completion")
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.argument("target_url", required=False)
@@ -492,6 +524,7 @@ def main(
     min_height: int,
     cookie_file: Optional[str],
     depth: int,
+    link_pattern: Optional[str],
     create_zip: bool
 ):
     if not json_output:
@@ -524,6 +557,8 @@ def main(
             output = _cfg.get("output", output)
             concurrency = _cfg.get("concurrency", concurrency)
             retry = _cfg.get("retry", retry)
+            depth = _cfg.get("depth", depth)
+            link_pattern = link_pattern or _cfg.get("match")
             if _cfg.get("yes"): yes = True
             if _cfg.get("prefix"): prefix = True
             if _cfg.get("timestamp"): timestamp = True
@@ -604,6 +639,7 @@ def main(
                 min_height=min_height,
                 cookies=cookies,
                 depth=depth,
+                link_pattern=link_pattern,
                 create_zip=create_zip
             )
 
