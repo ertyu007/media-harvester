@@ -5,8 +5,7 @@
 
 param(
     [switch]$Clean,
-    [switch]$Onefile,
-    [switch]$Gui
+    [switch]$Onefile
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,13 +13,8 @@ $ProjectRoot = Split-Path $PSScriptRoot -Parent
 $DistDir     = Join-Path $ProjectRoot "dist"
 $BuildDir    = Join-Path $ProjectRoot "build"
 $EntryPoint  = Join-Path $ProjectRoot "harvester.py"
-$AppName      = "media-harvester"
-$ExtraArgs    = @()
-if ($Gui) {
-    $EntryPoint = Join-Path $ProjectRoot "gui.py"
-    $AppName    = "media-harvester-gui"
-    $ExtraArgs  = @("--windowed")
-}
+$AppName     = "media-harvester"
+$ExtraArgs   = @()
 $SpecFile = Join-Path $ProjectRoot "$AppName.spec"
 
 Write-Host "=== Media Harvester Windows Build ===" -ForegroundColor Cyan

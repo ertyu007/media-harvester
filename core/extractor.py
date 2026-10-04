@@ -235,7 +235,7 @@ class MediaExtractor:
                 if best_srcset_url:
                     add_item(best_srcset_url, 'img[srcset]', alt, width, height)
             
-            for attr in ['data-original', 'data-src', 'data-highres', 'data-zoom-image', 'data-lazy-src', 'data-full', 'src']:
+            for attr in ['data-original', 'data-src', 'data-highres', 'data-zoom-image', 'data-lazy-src', 'data-full', 'data-url', 'src']:
                 val = img.get(attr)
                 if val:
                     add_item(val, f'img[{attr}]', alt, width, height)

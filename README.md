@@ -21,6 +21,7 @@
 | **Exponential Backoff Retry** | retry 403/429 พร้อม delay ทวีคูณ (configurable) |
 | **Async Downloads** | Concurrent downloads ด้วย `httpx` + `asyncio` |
 | **Agent Skill & JSON Mode** | `--json` output + `SKILL.md` พร้อมให้ AI Agent เรียกใช้ |
+| **Crawl Filter** | ตามลิงก์เฉพาะที่ match regex + แยกโฟลเดอร์ตามหน้าซอร์ส |
 | **Environment Diagnostics** | `python scripts/check_environment.py` ตรวจความพร้อมของระบบ |
 | **Automated Test Suite** | `python scripts/run_tests.py` รวม 14 unit tests ครอบคลุม core engine |
 | **Statistics Table** | `--stats` แสดงจำนวนสื่อแยกประเภท |
@@ -95,6 +96,15 @@ python harvester.py https://example.com --prefix
 
 # Timestamped subfolder per session
 python harvester.py https://example.com --timestamp
+
+# Crawl same-domain pages and follow only episode links
+python harvester.py https://example.com --depth 1 --match 'viewer'
+
+# Webtoon: images only, follows viewer links, groups by episode
+python harvester.py https://webtoons.com/en/genre/comic --webtoon -y --json
+
+# หาภาพที่คล้ายกันในโฟลเดอร์ดาวน์โหลด
+python scripts/find_near_duplicates.py downloads --threshold 10
 ```
 
 ### Batch & Config
@@ -122,7 +132,9 @@ python harvester.py https://example.com --retry 5
   "retry": 4,
   "yes": true,
   "prefix": false,
-  "timestamp": true
+  "timestamp": true,
+  "depth": 1,
+  "match": "viewer"
 }
 ```
 
@@ -149,6 +161,13 @@ Options:
   --retry N             Retry attempts per file (default: 3)
   --config FILE         Load defaults from JSON config file
   --json                Output machine-readable JSON for AI agents and scripts
+  --zip                 Compress downloaded folder into a .zip archive
+  --depth N             Recursively crawl same-domain links up to N levels deep
+  --match TEXT          Only follow crawl links matching this regex
+  --webtoon             Webtoon preset: images only, crawl viewer links, group by episode
+  --cookies FILE        Netscape-format cookies.txt file
+  --min-height N        Minimum image height in pixels
+  --min-width N         Minimum image width in pixels
   -h, --help            Show help message
 ```
 
@@ -179,16 +198,24 @@ downloads/
     └── summary.md             <- human-readable report
 ```
 
+เมื่อใช้ `--depth` ไฟล์จะแยกตามหน้าซอร์ส เช่น `downloads/example.com/ep-3/images/...`
+
 ---
 
 ## Changelog
 
+### Unreleased
+- `--depth` + `--match` crawl filtering
+- Group downloads by source page when crawling
+- `scripts/find_near_duplicates.py` — near-duplicate image report using Pillow
+- Remove tkinter GUI (`gui.py`, `run-gui.bat`, GUI spec/build)
+- `--webtoon` preset — ดูดเว็บตูน: เฉพาะภาพ, crawl viewer, แยก ep-N
+
 ### v1.3.0 — Beast Mode & GUI
 - Chrome TLS impersonation — ดูดเว็บกันบอทได้ (pixabay/pexels/unsplash)
-- tkinter GUI — `python gui.py` หรือ `run-gui.bat`, มี exe แยก (`-Gui`)
 - แยกโฟลเดอร์ตามสกุลไฟล์ (`images/webp/`, `images/jpg/`)
 - Magic-byte extension fix — เซิร์ฟเวอร์แปะป้าย Content-Type ผิดก็ได้ชื่อถูก
-- Interactive loop + HttpOnly cookies + `run.bat`/`run-gui.bat` launchers
+- Interactive loop + HttpOnly cookies + `run.bat` launcher
 
 ### v1.2.0 — Toolkit Standards & AI Agent Skill
 - Environment Diagnostics — เพิ่ม `scripts/check_environment.py` ตรวจ Python, dependencies, disk space และ network

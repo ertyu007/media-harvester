@@ -34,7 +34,7 @@ BANNER = r"""[bold cyan]
  | |  | |  __/ (_| | | (_| | | | | | (_| | |   \ V /  __/\__ \__ \ ||  __/ |   
  |_|  |_|\___|\__,_|_|\__,_| |_| |_|\__,_|_|    \_/ \___||___/___/\__\___|_|   
 [/bold cyan]
-[bold bright_black]  ⚡ Universal Media Scraper & Batch Downloader v1.3.0[/bold bright_black]
+[bold bright_black]   Universal Media Scraper & Batch Downloader v1.3.0[/bold bright_black]
 """
 
 def print_help_guide():
@@ -490,6 +490,7 @@ def process_single_url(
 @click.option("--depth", default=0, help="Recursively crawl same-domain links up to N levels deep (default: 0 = single page)")
 @click.option("--match", "link_pattern", default=None, help="Only follow crawl links matching this regex (e.g. 'viewer' for webtoon episodes)")
 @click.option("--zip", "create_zip", is_flag=True, help="Compress downloaded folder into a .zip archive after completion")
+@click.option("--webtoon", is_flag=True, help="Preset for webtoon pages: images only, crawl viewer links, group by episode")
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.argument("target_url", required=False)
 @click.option("-e", "--ext", default=None, help="Filter by file extension(s), e.g. webp, jpg, png, mp4")
@@ -525,7 +526,8 @@ def main(
     cookie_file: Optional[str],
     depth: int,
     link_pattern: Optional[str],
-    create_zip: bool
+    create_zip: bool,
+    webtoon: bool
 ):
     if not json_output:
         console.print(BANNER)
@@ -617,6 +619,17 @@ def main(
 
         min_size_bytes = parse_size_str(min_size) if min_size else 0
 
+        _depth = depth
+        _link_pattern = link_pattern
+        _media_type = media_type
+        _min_width = min_width
+        _min_height = min_height
+        if webtoon:
+            _depth = max(_depth, 1)
+            _link_pattern = _link_pattern or r"viewer"
+            _media_type = _media_type or "images"
+            _min_height = max(_min_height, 800)
+
         for u in urls:
             if not u.startswith(("http://", "https://")):
                 u = "https://" + u
@@ -624,7 +637,7 @@ def main(
                 url=u,
                 output_dir=output,
                 extensions=ext,
-                media_type_filter=media_type,
+                media_type_filter=_media_type,
                 min_size_bytes=min_size_bytes,
                 concurrency=concurrency,
                 auto_confirm=yes,
@@ -635,11 +648,11 @@ def main(
                 show_stats=stats,
                 max_retries=retry,
                 json_mode=json_output,
-                min_width=min_width,
-                min_height=min_height,
+                min_width=_min_width,
+                min_height=_min_height,
                 cookies=cookies,
-                depth=depth,
-                link_pattern=link_pattern,
+                depth=_depth,
+                link_pattern=_link_pattern,
                 create_zip=create_zip
             )
 

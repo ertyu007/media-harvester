@@ -103,5 +103,35 @@ class TestExtractor(unittest.TestCase):
         self.assertIn("https://example.com/sounds/bell.mp3", urls)
         self.assertIn("https://example.com/docs/guide.pdf", urls)
 
+    def test_extract_img_data_url(self):
+        html = '<img class="_images" src="placeholder.png" data-url="https://example.com/ep1/1.jpg">'
+        extractor = MediaExtractor()
+        result = extractor.extract_from_html(html, "https://example.com")
+        self.assertIn("https://example.com/ep1/1.jpg", [i.url for i in result.items])
+
+    def test_extract_internal_links_keeps_query(self):
+        html = '<a href="/viewer?episode_no=3">ep3</a><a href="https://other.com/x">out</a><a href="/page#frag">p</a>'
+        extractor = MediaExtractor()
+        links = extractor.extract_internal_links(html, "https://example.com")
+        self.assertIn("https://example.com/viewer?episode_no=3", links)
+        self.assertIn("https://example.com/page", links)
+        self.assertNotIn("https://other.com/x", links)
+
+    def test_extract_recursive_link_pattern(self):
+        class FakeExtractor(MediaExtractor):
+            pages = {
+                "https://example.com": ('<a href="/viewer?episode_no=1">1</a><a href="/about">a</a>', "https://example.com"),
+                "https://example.com/viewer?episode_no=1": ('<img src="/1.jpg">', "https://example.com/viewer?episode_no=1"),
+                "https://example.com/about": ('<img src="/about.jpg">', "https://example.com/about"),
+            }
+            def fetch_html(self, url):
+                html, final = self.pages[url]
+                return final, html, None
+        extractor = FakeExtractor()
+        result = extractor.extract_recursive("https://example.com", depth=1, link_pattern=r"viewer")
+        urls = [i.url for i in result.items]
+        self.assertIn("https://example.com/1.jpg", urls)
+        self.assertNotIn("https://example.com/about.jpg", urls)
+
 if __name__ == "__main__":
     unittest.main()

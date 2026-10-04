@@ -28,6 +28,12 @@ python harvester.py <TARGET_URL> -t images -s 50kb -y
 
 # Batch download from a list file
 python harvester.py -f urls.txt -y --stats
+
+# Crawl pages and follow only matching links
+python harvester.py <TARGET_URL> --depth 1 --match 'viewer' -y --json
+
+# Webtoon preset
+python harvester.py <SERIES_URL> --webtoon -y --json
 ```
 
 ---
@@ -50,6 +56,13 @@ python harvester.py -f urls.txt -y --stats
 | `--stats` | Print breakdown table of discovered media | `--stats` |
 | `--retry N` | Max exponential backoff retry attempts per file (default: 3) | `--retry 4` |
 | `--json` | Output machine-readable JSON for automated workflows | `--json` |
+| `--depth N` | Recursively crawl same-domain links up to N levels deep | `--depth 1` |
+| `--match TEXT` | Only follow crawl links matching this regex | `--match 'viewer'` |
+| `--webtoon` | Webtoon preset: images only, crawl `viewer` links, group by episode | `--webtoon` |
+| `--cookies FILE` | Netscape cookies.txt for authenticated sites | `--cookies cookies.txt` |
+| `--zip` | Compress downloaded folder into `.zip` | `--zip` |
+
+When `--depth` is used, files are grouped by source page folder such as `example.com/ep-3/images/...`.
 
 ---
 
