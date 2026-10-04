@@ -34,15 +34,15 @@ BANNER = r"""[bold cyan]
  | |  | |  __/ (_| | | (_| | | | | | (_| | |   \ V /  __/\__ \__ \ ||  __/ |   
  |_|  |_|\___|\__,_|_|\__,_| |_| |_|\__,_|_|    \_/ \___||___/___/\__\___|_|   
 [/bold cyan]
-[bold bright_black]   Universal Media Scraper & Batch Downloader v1.3.0[/bold bright_black]
+[bold bright_black]   Universal Media Scraper & Batch Downloader v1.4.2[/bold bright_black]
 """
 
 def print_help_guide():
     """Display a comprehensive, beautifully formatted Help Guide."""
     help_text = Text()
-    help_text.append("📖 Media Harvester - คู่มือการใช้งาน & คำสั่งทั้งหมด\n\n", style="bold yellow")
+    help_text.append(" Media Harvester - คู่มือการใช้งาน & คำสั่งทั้งหมด\n\n", style="bold yellow")
     
-    help_text.append("📌 รูปแบบการใช้งานมี 2 แบบ:\n", style="bold cyan")
+    help_text.append(" รูปแบบการใช้งานมี 2 แบบ:\n", style="bold cyan")
     help_text.append("  1. สั่งรันใน Terminal พร้อม Options ทันที (Direct CLI):\n", style="bold white")
     help_text.append("     python harvester.py <URL> [OPTIONS]\n\n", style="green")
     help_text.append("  2. โหมด Interactive (เปิดโปรแกรมแล้ววางเฉพาะ URL):\n", style="bold white")
@@ -70,7 +70,7 @@ def print_help_guide():
     console.print(Panel(help_text, border_style="cyan", padding=(1, 2)))
     console.print(opts_table)
 
-    examples_table = Table(title="[bold yellow]💡 ตัวอย่างคำสั่งยอดนิยม (พิมพ์ใน Terminal)[/bold yellow]", box=box.ROUNDED)
+    examples_table = Table(title="[bold yellow] ตัวอย่างคำสั่งยอดนิยม (พิมพ์ใน Terminal)[/bold yellow]", box=box.ROUNDED)
     examples_table.add_column("โจทย์การใช้งาน", style="bold white", width=36)
     examples_table.add_column("คำสั่งที่ใช้", style="bold cyan")
 
@@ -96,7 +96,7 @@ def print_help_guide():
     )
 
     console.print(examples_table)
-    console.print("\n[dim]ℹ️ ในระหว่างหน้าเลือกไฟล์ สามารถพิมพ์ช่วงตัวเลขได้ เช่น [bold]1,3,5-10[/bold] หรือ [bold]all[/bold] เพื่อเลือกทั้งหมด หรือพิมพ์ [bold]q[/bold] เพื่อยกเลิก[/dim]\n")
+    console.print("\n[dim]ในระหว่างหน้าเลือกไฟล์ สามารถพิมพ์ช่วงตัวเลขได้ เช่น [bold]1,3,5-10[/bold] หรือ [bold]all[/bold] เพื่อเลือกทั้งหมด หรือพิมพ์ [bold]q[/bold] เพื่อยกเลิก[/dim]\n")
 
 def parse_size_str(size_str: str) -> int:
     """Parse string like '50kb', '2mb', '500b' to bytes."""
@@ -178,7 +178,7 @@ def display_scrape_summary(result: ScrapeResult):
         ext = item.extension or '.unknown'
         ext_counts[ext] = ext_counts.get(ext, 0) + 1
         
-    ext_text = Text("\n 📂 สกุลไฟล์ที่พบ: ", style="dim bold")
+    ext_text = Text("\n  สกุลไฟล์ที่พบ: ", style="dim bold")
     sorted_exts = sorted(ext_counts.items(), key=lambda x: x[1], reverse=True)
     for ext, count in sorted_exts:
         ext_text.append(f"{ext} ", style="bold cyan")
@@ -293,7 +293,7 @@ def process_single_url(
 ):
     if not json_mode:
         depth_note = f" [dim](depth={depth})[/dim]" if depth > 0 else ""
-        console.print(f"\n[bold green]► Scanning:[/] [cyan]{url}[/cyan]{depth_note}")
+        console.print(f"\n[bold green]> Scanning:[/] [cyan]{url}[/cyan]{depth_note}")
 
     extractor = MediaExtractor(cookies=cookies or {})
     try:
@@ -305,14 +305,14 @@ def process_single_url(
         if json_mode:
             print(json.dumps({"status": "error", "message": f"Failed to fetch/parse URL: {e}", "url": url}, ensure_ascii=False))
         else:
-            console.print(f"[bold red]❌ Failed to fetch/parse URL:[/] {e}")
+            console.print(f"[bold red] Failed to fetch/parse URL:[/] {e}")
         return
 
     if not result.items:
         if json_mode:
             print(json.dumps({"status": "empty", "message": "No media items found", "url": url, "items": []}, ensure_ascii=False))
         else:
-            console.print("[yellow]⚠ No media items found on this page.[/yellow]")
+            console.print("[yellow] No media items found on this page.[/yellow]")
         return
 
     if not json_mode:
@@ -333,7 +333,7 @@ def process_single_url(
         if json_mode:
             print(json.dumps({"status": "empty", "message": "No media items matched criteria", "url": url, "items": []}, ensure_ascii=False))
         else:
-            console.print(f"[yellow]⚠ No media items matched criteria (ext: {extensions}, type: {media_type_filter}).[/yellow]")
+            console.print(f"[yellow] No media items matched criteria (ext: {extensions}, type: {media_type_filter}).[/yellow]")
         return
 
     if not json_mode:
@@ -380,14 +380,14 @@ def process_single_url(
             }
             print(json.dumps(payload, indent=2, ensure_ascii=False))
         else:
-            console.print(f"[bold magenta]⚡ Dry-run complete:[/] Would download {len(selected_items)} files.")
+            console.print(f"[bold magenta] Dry-run complete:[/] Would download {len(selected_items)} files.")
         return
 
     # Setup directories (default: downloads/<domain>/)
     organizer = MediaOrganizer(base_output_dir=output_dir)
     target_folder = organizer.create_destination_structure(url, use_timestamp=use_timestamp)
     if not json_mode:
-        console.print(f"\n[bold]📁 Saving to:[/] [green]{os.path.abspath(target_folder)}[/green]\n")
+        console.print(f"\n[bold] Saving to:[/] [green]{os.path.abspath(target_folder)}[/green]\n")
 
     # Start Downloader
     downloader = MediaDownloader(
@@ -443,7 +443,7 @@ def process_single_url(
     if create_zip:
         zip_path = organizer.create_zip_archive(target_folder)
         if not json_mode:
-            console.print(f"[bold]🗜 Archive:[/] [green]{os.path.abspath(zip_path)}[/green]")
+            console.print(f"[bold] Archive:[/] [green]{os.path.abspath(zip_path)}[/green]")
 
     # Summary calculations
     success_count = sum(1 for i in downloaded if i.download_status == "success")
@@ -469,7 +469,7 @@ def process_single_url(
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         summary_panel = Panel(
-            f"[bold green]✔ Download Complete![/bold green]\n\n"
+            f"[bold green] Download Complete![/bold green]\n\n"
             f"• [bold]New Saved Files:[/] [green]{success_count}[/green] files ({total_mb:.2f} MB)\n"
             f"• [bold]Skipped:[/] [yellow]{skipped_count}[/yellow] ({already_exist_count} already existed on disk)\n"
             f"• [bold]Failed:[/] [red]{failed_count}[/red]\n"
@@ -540,7 +540,7 @@ def main(
             sys.exit(1)
         cookies = load_cookies_file(cookie_file)
         if not json_output:
-            console.print(f"[dim]🍪 Loaded {len(cookies)} cookies from {cookie_file}[/dim]")
+            console.print(f"[dim] Loaded {len(cookies)} cookies from {cookie_file}[/dim]")
 
     # --- Load JSON config file if provided ---
     if config_file:
@@ -589,7 +589,7 @@ def main(
 
     while True:
         if not batch_mode:
-            console.print("[dim]💡 วาง [bold cyan]URL[/bold cyan] ของเว็บที่ต้องการดูด (หรือพิมพ์ [bold cyan]help[/bold cyan] / [bold red]q[/bold red] เพื่อออก)[/dim]")
+            console.print("[dim] วาง [bold cyan]URL[/bold cyan] ของเว็บที่ต้องการดูด (หรือพิมพ์ [bold cyan]help[/bold cyan] / [bold red]q[/bold red] เพื่อออก)[/dim]")
             entered_url = Prompt.ask("[bold cyan]Enter Webpage URL to Scrape[/bold cyan]")
             entered_clean = entered_url.strip()
             
@@ -598,7 +598,7 @@ def main(
                 sys.exit(0)
                 
             if entered_clean.lower() in ['exit', 'q', 'quit']:
-                console.print("[yellow]Bye! 👋[/yellow]")
+                console.print("[yellow]Bye! [/yellow]")
                 sys.exit(0)
                 
             if entered_clean.lower() in ['help', '?', '-h', '--help', 'guide']:

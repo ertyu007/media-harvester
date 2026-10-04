@@ -4,7 +4,7 @@
 
 > **Universal Media Scraper & Batch Downloader** — CLI tool ดูดรูป วิดีโอ เสียง เอกสาร จากเว็บใดก็ได้
 
-[![Version](https://img.shields.io/badge/version-v1.3.0-brightgreen?style=flat-square)](https://github.com/ertyu007/media-harvester)
+[![Version](https://img.shields.io/badge/version-v1.4.2-brightgreen?style=flat-square)](https://github.com/ertyu007/media-harvester)
 [![Python](https://img.shields.io/badge/python-3.10+-blue?style=flat-square&logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
 
@@ -204,7 +204,14 @@ downloads/
 
 ## Changelog
 
-### Unreleased
+### v1.4.2
+- Remove emoji/icons from CLI output and docs
+- Bump bundled version to 1.4.2
+
+### v1.4.1
+- GitHub Actions release workflow: push tag `v*` → build onefile exe → attach to release
+
+### v1.4.0
 - `--depth` + `--match` crawl filtering
 - Group downloads by source page when crawling
 - `scripts/find_near_duplicates.py` — near-duplicate image report using Pillow
